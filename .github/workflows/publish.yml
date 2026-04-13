@@ -1,0 +1,77 @@
+name: Publish to npm
+
+# Auto-publishes @codeceptjs/reflection to npm on every GitHub release.
+# Uses npm provenance (sigstore transparency log) so the published package
+# is cryptographically linked to this repo (codeceptjs/reflection) and the
+# exact workflow run that built it.
+#
+# Tag the release with a SemVer tag like `v0.4.0` or `v0.5.0-beta.1`.
+# - Stable tags (no prerelease suffix) publish under the default `latest` dist-tag.
+# - Prereleases (alpha/beta/rc) publish under the `beta` dist-tag.
+
+on:
+  release:
+    types: [published]
+
+# Required for npm provenance: id-token grants OIDC to the workflow so npm
+# can verify the build came from this repository's Actions runner.
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish @codeceptjs/reflection (provenance)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout codeceptjs/reflection at release ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.target_commitish }}
+
+      - name: Setup Node 22 with npm registry
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm install
+
+      # Upgrade npm to the latest version — provenance support improves with
+      # every release and we want the most up-to-date signer on every publish.
+      - name: Install latest npm
+        run: npm install -g npm@latest
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Run tests before publishing
+        run: npm test
+
+      - name: Set package version from release tag
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          VERSION="${TAG#v}"
+          echo "Publishing @codeceptjs/reflection version $VERSION"
+          npm version "$VERSION" --no-git-tag-version
+
+      - name: Determine dist-tag
+        id: disttag
+        run: |
+          if [[ "${{ github.event.release.prerelease }}" == "true" ]] \
+             || [[ "${{ github.event.release.tag_name }}" == *alpha* ]] \
+             || [[ "${{ github.event.release.tag_name }}" == *beta* ]] \
+             || [[ "${{ github.event.release.tag_name }}" == *rc* ]]; then
+            echo "tag=beta" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
+          fi
+
+      # `--provenance` requires npm >= 9.5.0 (we installed latest above).
+      # Auth uses npm trusted publishing via OIDC (id-token: write above) —
+      # no NPM_TOKEN secret needed. The published package gets a provenance
+      # statement linking it to this workflow run at github.com/codeceptjs/reflection.
+      - name: Publish to npm with provenance
+        run: npm publish --provenance --access public --tag ${{ steps.disttag.outputs.tag }}
