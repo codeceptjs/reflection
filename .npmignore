@@ -1,0 +1,8 @@
+test
+docs
+.github
+.gitignore
+vitest.config.js
+tsconfig.json
+coverage
+*.log
