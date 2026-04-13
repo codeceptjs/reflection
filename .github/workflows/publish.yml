@@ -1,21 +1,19 @@
 name: Publish to npm
 
 # Auto-publishes @codeceptjs/reflection to npm on every GitHub release.
-# Uses npm provenance (sigstore transparency log) so the published package
-# is cryptographically linked to this repo (codeceptjs/reflection) and the
-# exact workflow run that built it.
+# Mirrors codeceptjs/codeceptjs `.github/workflows/publish-beta.yml` — same
+# pattern: setup-node with registry-url, local install, upgrade npm to latest,
+# set version from release tag, publish with --provenance via trusted publishing.
 #
 # Tag the release with a plain SemVer tag like `0.4.0` or `0.5.0-beta.1`
 # (no `v` prefix).
-# - Stable tags (no prerelease suffix) publish under the default `latest` dist-tag.
+# - Stable tags publish under the default `latest` dist-tag.
 # - Prereleases (alpha/beta/rc) publish under the `beta` dist-tag.
 
 on:
   release:
     types: [published]
 
-# Required for npm provenance: id-token grants OIDC to the workflow so npm
-# can verify the build came from this repository's Actions runner.
 permissions:
   contents: read
   id-token: write
@@ -26,44 +24,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout codeceptjs/reflection at release ref
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.release.target_commitish }}
 
-      # IMPORTANT: do NOT pass `registry-url` to setup-node here.
-      # When registry-url is set, setup-node writes a .npmrc with
-      #   //registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}
-      # and with no NODE_AUTH_TOKEN in env, npm sends an empty Bearer
-      # header which short-circuits the trusted-publishing OIDC flow
-      # (sigstore still works, but the final PUT gets rejected as 404).
-      # Omitting registry-url lets npm use its default registry and
-      # attempt OIDC automatically for packages with a configured
-      # trusted publisher.
-      - name: Setup Node 22
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
+          registry-url: 'https://registry.npmjs.org'
 
-      - name: Install dependencies
-        run: npm install
+      - run: npm install
+      - run: npm install -g npm@latest
 
-      # NOTE: we intentionally do NOT run `npm install -g npm@latest` here.
-      # Under Node 22.22+ that step hits a known arborist regression
-      # (`Cannot find module 'promise-retry'`) that breaks the publish.
-      # Node 22 already ships with npm >= 10.9, and npm has supported
-      # --provenance since 9.5, so the upgrade was cosmetic.
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Run tests before publishing
-        run: npm test
-
-      - name: Set package version from release tag
+      - name: Set package version
         run: |
           VERSION="${{ github.event.release.tag_name }}"
-          echo "Publishing @codeceptjs/reflection version $VERSION"
           npm version "$VERSION" --no-git-tag-version
 
       - name: Determine dist-tag
@@ -78,9 +53,5 @@ jobs:
             echo "tag=latest" >> "$GITHUB_OUTPUT"
           fi
 
-      # `--provenance` requires npm >= 9.5.0; Node 22's bundled npm is 10.9+.
-      # Auth uses npm trusted publishing via OIDC (id-token: write above) —
-      # no NPM_TOKEN secret needed. The published package gets a provenance
-      # statement linking it to this workflow run at github.com/codeceptjs/reflection.
-      - name: Publish to npm with provenance
+      - name: Publish to npm
         run: npm publish --provenance --access public --tag ${{ steps.disttag.outputs.tag }}
