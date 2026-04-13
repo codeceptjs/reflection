@@ -39,10 +39,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      # Upgrade npm to the latest version — provenance support improves with
-      # every release and we want the most up-to-date signer on every publish.
-      - name: Install latest npm
-        run: npm install -g npm@latest
+      # NOTE: we intentionally do NOT run `npm install -g npm@latest` here.
+      # Under Node 22.22+ that step hits a known arborist regression
+      # (`Cannot find module 'promise-retry'`) that breaks the publish.
+      # Node 22 already ships with npm >= 10.9, and npm has supported
+      # --provenance since 9.5, so the upgrade was cosmetic.
 
       - name: Typecheck
         run: npm run typecheck
@@ -69,7 +70,7 @@ jobs:
             echo "tag=latest" >> "$GITHUB_OUTPUT"
           fi
 
-      # `--provenance` requires npm >= 9.5.0 (we installed latest above).
+      # `--provenance` requires npm >= 9.5.0; Node 22's bundled npm is 10.9+.
       # Auth uses npm trusted publishing via OIDC (id-token: write above) —
       # no NPM_TOKEN secret needed. The published package gets a provenance
       # statement linking it to this workflow run at github.com/codeceptjs/reflection.
