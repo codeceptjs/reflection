@@ -5,7 +5,8 @@ name: Publish to npm
 # is cryptographically linked to this repo (codeceptjs/reflection) and the
 # exact workflow run that built it.
 #
-# Tag the release with a SemVer tag like `v0.4.0` or `v0.5.0-beta.1`.
+# Tag the release with a plain SemVer tag like `0.4.0` or `0.5.0-beta.1`
+# (no `v` prefix).
 # - Stable tags (no prerelease suffix) publish under the default `latest` dist-tag.
 # - Prereleases (alpha/beta/rc) publish under the `beta` dist-tag.
 
@@ -53,8 +54,7 @@ jobs:
 
       - name: Set package version from release tag
         run: |
-          TAG="${{ github.event.release.tag_name }}"
-          VERSION="${TAG#v}"
+          VERSION="${{ github.event.release.tag_name }}"
           echo "Publishing @codeceptjs/reflection version $VERSION"
           npm version "$VERSION" --no-git-tag-version
 
