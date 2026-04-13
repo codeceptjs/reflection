@@ -115,6 +115,29 @@ console.log(tr.dependencies)  // ['I', 'loginPage']
 
 This lets agents answer questions like "which Page Objects does this test use?" without executing anything.
 
+## Enumerate a whole project
+
+If you start from a `codecept.conf.js` instead of a live runtime object, `Reflection.project(...)` gives you the map:
+
+```js
+const project = await Reflection.project('./codecept.conf.js')
+
+project.listSuites()          // every Feature(...) across all test files
+project.listTests()           // every Scenario(...) with its parent suite
+project.listTestsBySuite()    // Map<suiteTitle, tests[]>
+project.listSteps('user signs in')  // static dry-run of a scenario body
+project.listPageObjects()     // [{ name, file, kind, className }, ...]
+
+// And hand off to the specialized reflections for editing:
+const po = project.getPageObject('loginPage')
+po.addMember(`reset() { /* ... */ }`).apply()
+
+const sur = project.getSuite('Auth')
+sur.addTest(`Scenario('new flow', async ({ I }) => { /* ... */ })`).apply()
+```
+
+`listSteps` is a **static dry-run** — it walks the AST of the scenario's callback without executing anything. Loops unroll to their source occurrences; for accurate runtime step capture, subscribe to CodeceptJS's `event.step.started` dispatcher instead.
+
 ## Edit a Page Object
 
 Page Objects in CodeceptJS can be class-based or plain-object. `PageObjectReflection` handles both, and also surfaces the dependencies declared via `const { ... } = inject()`:

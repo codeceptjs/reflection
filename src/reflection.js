@@ -2,6 +2,7 @@ import { StepReflection } from './step.js'
 import { TestReflection } from './test.js'
 import { SuiteReflection } from './suite.js'
 import { PageObjectReflection } from './pageobject.js'
+import { ProjectReflection } from './project.js'
 import { Batch } from './batch.js'
 import { configure as configureSourcePath } from './source-path.js'
 import { clearCache } from './parser.js'
@@ -21,6 +22,13 @@ export const Reflection = {
 
   forPageObject(filePath, opts = {}) {
     return new PageObjectReflection(filePath, opts)
+  },
+
+  project(opts) {
+    if (typeof opts === 'string' || (opts && opts.configPath && !opts.config)) {
+      return ProjectReflection.load(opts)
+    }
+    return new ProjectReflection(opts)
   },
 
   batch(filePath) {

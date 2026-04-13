@@ -137,11 +137,71 @@ export declare class PageObjectReflection {
   removeMember(name: string): Edit
 }
 
+export interface CodeceptConfigLike {
+  tests?: string | string[]
+  include?: Record<string, string>
+  helpers?: Record<string, unknown>
+  [k: string]: unknown
+}
+
+export interface SuiteEntry {
+  title: string | null
+  file: string
+  line: number
+}
+
+export interface TestEntry {
+  title: string | null
+  suite: string | null
+  file: string
+  range: Range
+}
+
+export interface StepEntry {
+  code: string
+  receiver: string | null
+  method: string | null
+  args: string[]
+  line: number
+  column: number
+  range: Range
+}
+
+export interface PageObjectEntry {
+  name: string
+  file: string
+  kind: 'class' | 'plain-object' | null
+  className: string | null
+}
+
+export declare class ProjectReflection {
+  constructor(opts: { config?: CodeceptConfigLike; configPath?: string; basePath?: string })
+  static load(opts: string | { configPath: string; basePath?: string }): Promise<ProjectReflection>
+  readonly config: CodeceptConfigLike | null
+  readonly basePath: string
+  resolvePath(p: string): string
+  listTestFiles(): string[]
+  listSuites(): SuiteEntry[]
+  listTests(): TestEntry[]
+  listTestsBySuite(): Map<string, Array<{ title: string | null; range: Range; file: string }>>
+  listSteps(
+    testRef: TestReflection | TestLike | string,
+    file?: string,
+  ): StepEntry[]
+  listPageObjects(opts?: { includeActor?: boolean }): PageObjectEntry[]
+  getSuite(title: string, file?: string): SuiteReflection
+  getSuite(opts: { title: string; file?: string }): SuiteReflection
+  getTest(title: string, file?: string): TestReflection
+  getTest(opts: { title: string; file?: string }): TestReflection
+  getPageObject(name: string): PageObjectReflection
+}
+
 export declare const Reflection: {
   forStep(step: StepLike, opts?: { test?: TestLike }): StepReflection
   forTest(test: TestLike): TestReflection
   forSuite(suite: SuiteLike): SuiteReflection
   forPageObject(filePath: string, opts?: { name?: string }): PageObjectReflection
+  project(opts: CodeceptConfigLike | { config?: CodeceptConfigLike; configPath?: string; basePath?: string } | string): ProjectReflection | Promise<ProjectReflection>
   batch(filePath: string): Batch
   configure(opts?: ReflectionConfigureOptions): void
   clearCache(): void

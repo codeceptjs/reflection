@@ -1,5 +1,8 @@
 # @codeceptjs/reflection
 
+[![Test](https://github.com/codeceptjs/reflection/actions/workflows/test.yml/badge.svg)](https://github.com/codeceptjs/reflection/actions/workflows/test.yml)
+[![npm](https://img.shields.io/npm/v/@codeceptjs/reflection.svg)](https://www.npmjs.com/package/@codeceptjs/reflection)
+
 AST-based reflection for CodeceptJS tests, suites, and steps. Safely read and edit scenario source without regex.
 
 ## Install
@@ -38,9 +41,12 @@ Reflection.forStep(step, { test })           // StepReflection
 Reflection.forTest(test)                     // TestReflection
 Reflection.forSuite(suite)                   // SuiteReflection — addTest/removeTest
 Reflection.forPageObject(filePath, { name }) // PageObjectReflection — add/replace/remove members
+Reflection.project('./codecept.conf.js')     // ProjectReflection — enumerate suites, tests, steps, page objects
 ```
 
-Each exposes the same shape: `fileName`, `read()`, `replace()`, plus type-specific accessors. `SuiteReflection` and `PageObjectReflection` also support programmatic add/remove of children.
+Each `forX` reflector exposes the same shape: `fileName`, `read()`, `replace()`, plus type-specific accessors. `SuiteReflection` and `PageObjectReflection` also support programmatic add/remove of children.
+
+`Reflection.project(...)` reads a CodeceptJS config and gives you the map of the whole project — then hands off individual targets to the specialized reflectors.
 
 ## Batching
 

@@ -3,6 +3,7 @@ export { StepReflection } from './step.js'
 export { TestReflection } from './test.js'
 export { SuiteReflection } from './suite.js'
 export { PageObjectReflection } from './pageobject.js'
+export { ProjectReflection } from './project.js'
 export { Edit } from './edit.js'
 export { Batch } from './batch.js'
 export {

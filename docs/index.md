@@ -29,6 +29,7 @@ Optional peers:
 - [Getting started](./getting-started.md)
 - [API reference](./api/)
   - [Reflection factory](./api/reflection.md)
+  - [ProjectReflection](./api/project-reflection.md)
   - [StepReflection](./api/step-reflection.md)
   - [TestReflection](./api/test-reflection.md)
   - [SuiteReflection](./api/suite-reflection.md)

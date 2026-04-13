@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.0 — Unreleased
+
+Added `ProjectReflection` — a project-level discovery layer that reads a CodeceptJS config and enumerates suites, tests, steps, and page objects without running anything.
+
+- `Reflection.project(configPath | opts)` / `ProjectReflection.load(pathOrOpts)`.
+- `listTestFiles()`, `listSuites()`, `listTests()`, `listTestsBySuite()`, `listSteps(testRef)`, `listPageObjects({ includeActor })`.
+- `getSuite(title, file?)` / `getTest(title, file?)` / `getPageObject(name)` — hand off to the specialized reflectors.
+- Static "dry-run" step listing via AST walk — no CodeceptJS boot required.
+- Config loader supports `export const config = {...}`, `export default {...}`, `module.exports = {...}`, and `.json`.
+- New runtime dep: `glob` for test-file discovery.
+
 ## 0.3.0 — Unreleased
 
 Added `PageObjectReflection` for source-level introspection and editing of CodeceptJS Page Objects.
