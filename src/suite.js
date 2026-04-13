@@ -1,6 +1,7 @@
 import { parseFile } from './parser.js'
 import { resolveSourceFile } from './source-path.js'
 import { locateSuiteByTitle, collectSuiteStatements, HOOK_KINDS } from './locate/suite.js'
+import { scanFile as scanParsedFile } from './locate/file-scan.js'
 import { extractScenarioDepsJS, extractScenarioDepsTS } from './locate/deps.js'
 import { Edit } from './edit.js'
 import { ReflectionError, NotFoundError, AmbiguousLocateError } from './errors.js'
@@ -24,7 +25,35 @@ export class SuiteReflection {
   }
 
   get title() {
-    return this._suite.title
+    if (this._suite.title) return this._suite.title
+    if (this._resolvedTitle !== undefined) return this._resolvedTitle
+    this._resolvedTitle = this._autoDetectTitle()
+    return this._resolvedTitle
+  }
+
+  _autoDetectTitle() {
+    const parsed = this._parsed()
+    const scanned = scanParsedFile(parsed)
+    if (scanned.features.length === 0) {
+      throw new NotFoundError(`No Feature found in ${parsed.filePath}`, {
+        filePath: parsed.filePath,
+      })
+    }
+    if (scanned.features.length > 1) {
+      throw new AmbiguousLocateError(
+        `Multiple Features in ${parsed.filePath}; pass { title } to disambiguate. Candidates: ${scanned.features.map(f => `"${f.title}" (line ${f.line})`).join(', ')}`,
+        {
+          filePath: parsed.filePath,
+          candidates: scanned.features.map(f => ({
+            title: f.title,
+            line: f.line,
+            start: f.range.start,
+            end: f.range.end,
+          })),
+        },
+      )
+    }
+    return scanned.features[0].title
   }
 
   get tags() {

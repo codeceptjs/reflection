@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.0 — Unreleased
+
+Added single-file discovery without a config or a runtime Mocha suite object.
+
+- `Reflection.scanFile(filePath)` returns `{ suites, tests }` for a file — every `Feature(...)` and `Scenario(...)` with its parent suite, byte range, and line. Reuses the same walker `ProjectReflection` uses internally.
+- `Reflection.forSuite({ file })` now auto-detects the suite title when the file has exactly one `Feature(...)`. Throws `AmbiguousLocateError` if multiple exist, `NotFoundError` if none. `forSuite` also accepts a bare path string (`Reflection.forSuite('./auth.js')`) as a shorthand.
+
 ## 0.5.0 — Unreleased
 
 Added hook reflection to `SuiteReflection` for `Before`, `After`, `BeforeSuite`, and `AfterSuite`.

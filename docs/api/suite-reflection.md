@@ -7,10 +7,13 @@ A suite's "members" are the top-level `Scenario` / `Data().Scenario` statements 
 ## Construction
 
 ```js
-Reflection.forSuite(suite)
+Reflection.forSuite(suite)                       // live runtime suite object
+Reflection.forSuite({ title, file })             // suite-like object
+Reflection.forSuite({ file: './test/auth.js' })  // auto-detect title
+Reflection.forSuite('./test/auth.js')            // bare path shorthand
 ```
 
-`suite` must have `title` and `file`.
+`file` is required. `title` is optional: if omitted and the file has exactly one `Feature(...)`, it's used automatically. If the file has multiple Features, `AmbiguousLocateError` is thrown.
 
 ## Properties
 

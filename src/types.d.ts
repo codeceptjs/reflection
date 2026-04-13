@@ -217,12 +217,33 @@ export declare class ProjectReflection {
   getPageObject(name: string): PageObjectReflection
 }
 
+export interface ScanFileSuiteEntry {
+  title: string | null
+  file: string
+  line: number
+  range: Range
+}
+
+export interface ScanFileTestEntry {
+  title: string | null
+  suite: string | null
+  file: string
+  line: number
+  range: Range
+}
+
+export interface ScanFileResult {
+  suites: ScanFileSuiteEntry[]
+  tests: ScanFileTestEntry[]
+}
+
 export declare const Reflection: {
   forStep(step: StepLike, opts?: { test?: TestLike }): StepReflection
   forTest(test: TestLike): TestReflection
-  forSuite(suite: SuiteLike): SuiteReflection
+  forSuite(suite: SuiteLike | { file: string; title?: string } | string): SuiteReflection
   forPageObject(filePath: string, opts?: { name?: string }): PageObjectReflection
   project(opts: CodeceptConfigLike | { config?: CodeceptConfigLike; configPath?: string; basePath?: string } | string): ProjectReflection | Promise<ProjectReflection>
+  scanFile(filePath: string): ScanFileResult
   batch(filePath: string): Batch
   configure(opts?: ReflectionConfigureOptions): void
   clearCache(): void

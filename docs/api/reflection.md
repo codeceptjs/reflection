@@ -20,9 +20,32 @@ Returns a [`TestReflection`](./test-reflection.md).
 |---|---|---|
 | `test` | `TestLike` | Object with `title`, `file`, and optional `opts.data`, `meta`, `tags`. |
 
-## `Reflection.forSuite(suite)`
+## `Reflection.forSuite(suiteOrPath)`
 
-Returns a [`SuiteReflection`](./suite-reflection.md).
+Returns a [`SuiteReflection`](./suite-reflection.md). Accepts any of:
+
+```js
+Reflection.forSuite(suite)                       // live runtime suite object { title, file, ... }
+Reflection.forSuite({ title, file })             // suite-like object
+Reflection.forSuite({ file: './test/auth.js' })  // no title — auto-detected
+Reflection.forSuite('./test/auth.js')            // bare path — shorthand for { file: ... }
+```
+
+When the `title` is omitted, the suite is auto-detected from the file: if there's exactly one `Feature(...)` call, it's used. If there are multiple, `AmbiguousLocateError` is thrown with the list of candidate titles. If there are none, `NotFoundError`.
+
+## `Reflection.scanFile(filePath)`
+
+Parses a file and returns every `Feature(...)` and `Scenario(...)` it contains, without constructing any reflection objects. Useful for lightweight discovery when you don't need a full `ProjectReflection`.
+
+```js
+Reflection.scanFile('./test/auth.js')
+// {
+//   suites: [{ title: 'Auth', file: '...', line: 1, range: {...} }, ...],
+//   tests:  [{ title: 'login works', suite: 'Auth', file: '...', line: 3, range: {...} }, ...],
+// }
+```
+
+Each test entry is tagged with the `suite` whose `Feature(...)` precedes it in source order. Throws `UnsupportedSourceError` on Gherkin `.feature` files.
 
 ## `Reflection.batch(filePath)`
 
