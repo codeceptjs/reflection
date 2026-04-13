@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.0 — Unreleased
+
+Added hook reflection to `SuiteReflection` for `Before`, `After`, `BeforeSuite`, and `AfterSuite`.
+
+- `sur.hooks` — list of `{ kind, line, range }` entries scoped to the current suite.
+- `sur.findHook(kind)` — filter by kind.
+- `sur.addHook(kind, code, { position })` — append after existing hooks (or right after `Feature(...)` if none); scoped to the current suite.
+- `sur.removeHook(kind, { index })` — delete a hook; throws `AmbiguousLocateError` when multiple match and no index is given.
+- `sur.replaceHook(kind, code, { index })` — replace a hook body with the same disambiguation semantics.
+
 ## 0.4.0 — Unreleased
 
 Added `ProjectReflection` — a project-level discovery layer that reads a CodeceptJS config and enumerates suites, tests, steps, and page objects without running anything.

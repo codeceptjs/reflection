@@ -41,4 +41,3 @@
 - Worker-safe concurrent edits (file locking)
 - `.replace()` validating the new code parses
 - `.replace()` accepting a function callback `(node) => newCode`
-- Hook reflection (`Before`, `After`, `BeforeSuite`, `AfterSuite`)

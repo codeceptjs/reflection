@@ -104,6 +104,22 @@ sur.removeTest('flaky login').apply()
 
 Insertion is scoped to the current suite, so the new Scenario will not land after a later `Feature(...)` in the same file.
 
+### Edit suite hooks
+
+`BeforeSuite`, `Before`, `After`, and `AfterSuite` are editable too:
+
+```js
+sur.hooks                        // [{ kind: 'BeforeSuite', line: 3, range: {...} }, ...]
+sur.findHook('Before')           // just the Before hooks
+
+sur.addHook('BeforeSuite', `BeforeSuite(async ({ I }) => { I.amOnPage('/seed') })`).apply()
+sur.replaceHook('Before', `Before(async ({ I }) => { I.clearCookie() })`).apply()
+sur.removeHook('After').apply()
+
+// Multiple hooks of the same kind? Disambiguate with { index }
+sur.removeHook('Before', { index: 1 }).apply()
+```
+
 ## List dependencies
 
 Both `TestReflection` and `SuiteReflection` expose a `dependencies` accessor that reads the destructured parameter list from the scenario callback:

@@ -21,6 +21,7 @@ Reflection.forSuite(suite)
 | `tags` | `string[]` | |
 | `meta` | `object` | |
 | `tests` | `Array<{ title, range }>` | Scenarios that belong to this suite, in source order. `title` is the first string argument of each `Scenario(...)`. `range` is the byte range of the full statement. |
+| `hooks` | `Array<{ kind, line, range }>` | `Before` / `After` / `BeforeSuite` / `AfterSuite` calls that belong to this suite, in source order. `kind` is the hook function name. |
 | `dependencies` | `string[]` | Unique destructured parameter names across all scenarios in this suite (e.g. `['I', 'loginPage']`). Non-destructured params appear as `*name` so you can tell them apart. |
 
 ## Methods
@@ -59,6 +60,57 @@ The lookup is scoped: if another suite in the same file has a scenario with the 
 
 ```js
 sur.removeTest('flaky login').apply()
+```
+
+## Hook editing
+
+CodeceptJS suite hooks — `BeforeSuite`, `Before`, `After`, `AfterSuite` — are top-level sibling statements of `Feature` / `Scenario`. `SuiteReflection` locates them by walking the same suite range used for `tests`, so each hook operation is scoped to the current Feature.
+
+### `findHook(kind)`
+Returns all hooks of a given kind in this suite (in source order). Useful before calling `removeHook` / `replaceHook` to check for ambiguity.
+
+```js
+sur.findHook('Before')   // [{ kind: 'Before', line: 5, range: {...} }]
+```
+
+### `addHook(kind, code, opts?)`
+Inserts a new hook and returns an [`Edit`](./edit.md).
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `position` | `'afterHooks' \| 'afterFeature'` | `'afterHooks'` | `'afterHooks'` appends after the last existing hook in this suite, or after `Feature(...)` if none exist. `'afterFeature'` always inserts right after `Feature(...)`. |
+
+```js
+sur.addHook(
+  'BeforeSuite',
+  `BeforeSuite(async ({ I }) => { I.amOnPage('/seed') })`,
+).apply()
+```
+
+Insertion is scoped — the hook will never land past the next `Feature(...)` in the same file. Throws `ReflectionError` if `kind` is not one of the four supported hook names.
+
+### `removeHook(kind, opts?)`
+Deletes a hook of a given kind, scoped to this suite.
+
+| Option | Type | Description |
+|---|---|---|
+| `index` | `number?` | Disambiguate when this suite has multiple hooks of the same kind. 0-based index into `findHook(kind)`. |
+
+```js
+sur.removeHook('Before').apply()
+sur.removeHook('Before', { index: 1 }).apply()  // remove the second of two Before hooks
+```
+
+Throws `NotFoundError` if no hook of that kind exists (or `index` is out of range). Throws `AmbiguousLocateError` when there are multiple matching hooks and no `index` was given.
+
+### `replaceHook(kind, code, opts?)`
+Replaces the body of a hook. Accepts the same `{ index }` option as `removeHook` for disambiguation.
+
+```js
+sur.replaceHook(
+  'Before',
+  `Before(async ({ I }) => { I.amOnPage('/login') })`,
+).apply()
 ```
 
 ## Gherkin

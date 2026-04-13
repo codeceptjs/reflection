@@ -35,6 +35,13 @@ function isScenarioCallee(name) {
   return false
 }
 
+export const HOOK_KINDS = ['BeforeSuite', 'Before', 'After', 'AfterSuite']
+const HOOK_SET = new Set(HOOK_KINDS)
+
+function isHookCallee(name) {
+  return !!name && HOOK_SET.has(name)
+}
+
 export function locateSuiteByTitle(parsed, { title, lineHint }) {
   if (parsed.engine === 'acorn') return locateSuiteJS(parsed, title, lineHint)
   return locateSuiteTS(parsed, title, lineHint)
@@ -88,8 +95,9 @@ function collectSuiteStatementsJS(parsed, featureNode) {
   )
   const featureStmt = idx !== -1 ? body[idx] : null
   const scenarios = []
+  const hooks = []
   let suiteEnd = parsed.source.length
-  if (idx === -1) return { featureStmt, scenarios, suiteEnd }
+  if (idx === -1) return { featureStmt, scenarios, hooks, suiteEnd }
 
   for (let i = idx + 1; i < body.length; i++) {
     const stmt = body[i]
@@ -109,9 +117,17 @@ function collectSuiteStatementsJS(parsed, featureNode) {
         title: firstStringArgJS(expr),
         range: { start: stmt.start, end: stmt.end },
       })
+    } else if (isHookCallee(name)) {
+      hooks.push({
+        stmt,
+        call: expr,
+        kind: name,
+        line: stmt.loc.start.line,
+        range: { start: stmt.start, end: stmt.end },
+      })
     }
   }
-  return { featureStmt, scenarios, suiteEnd }
+  return { featureStmt, scenarios, hooks, suiteEnd }
 }
 
 function collectSuiteStatementsTS(parsed, featureNode) {
@@ -123,8 +139,9 @@ function collectSuiteStatementsTS(parsed, featureNode) {
   )
   const featureStmt = idx !== -1 ? stmts[idx] : null
   const scenarios = []
+  const hooks = []
   let suiteEnd = parsed.source.length
-  if (idx === -1) return { featureStmt, scenarios, suiteEnd }
+  if (idx === -1) return { featureStmt, scenarios, hooks, suiteEnd }
 
   for (let i = idx + 1; i < stmts.length; i++) {
     const stmt = stmts[i]
@@ -144,9 +161,18 @@ function collectSuiteStatementsTS(parsed, featureNode) {
         title: firstStringArgTS(ts, expr),
         range: { start: stmt.getStart(sourceFile), end: stmt.getEnd() },
       })
+    } else if (isHookCallee(name)) {
+      const start = stmt.getStart(sourceFile)
+      hooks.push({
+        stmt,
+        call: expr,
+        kind: name,
+        line: sourceFile.getLineAndCharacterOfPosition(start).line + 1,
+        range: { start, end: stmt.getEnd() },
+      })
     }
   }
-  return { featureStmt, scenarios, suiteEnd }
+  return { featureStmt, scenarios, hooks, suiteEnd }
 }
 
 function locateSuiteTS(parsed, title, lineHint) {

@@ -88,8 +88,24 @@ export interface SuiteTestEntry {
   range: Range
 }
 
+export type HookKind = 'BeforeSuite' | 'Before' | 'After' | 'AfterSuite'
+
+export interface SuiteHookEntry {
+  kind: HookKind
+  line: number
+  range: Range
+}
+
 export interface AddTestOptions {
   position?: 'start' | 'end'
+}
+
+export interface AddHookOptions {
+  position?: 'afterFeature' | 'afterHooks'
+}
+
+export interface HookIndexOption {
+  index?: number
 }
 
 export declare class SuiteReflection {
@@ -99,11 +115,16 @@ export declare class SuiteReflection {
   readonly tags: string[]
   readonly meta: Record<string, unknown>
   readonly tests: SuiteTestEntry[]
+  readonly hooks: SuiteHookEntry[]
   readonly dependencies: string[]
   read(): string
   replace(newCode: string): Edit
   addTest(code: string, opts?: AddTestOptions): Edit
   removeTest(title: string): Edit
+  findHook(kind: HookKind): SuiteHookEntry[]
+  addHook(kind: HookKind, code: string, opts?: AddHookOptions): Edit
+  removeHook(kind: HookKind, opts?: HookIndexOption): Edit
+  replaceHook(kind: HookKind, code: string, opts?: HookIndexOption): Edit
 }
 
 export interface ReflectionConfigureOptions {

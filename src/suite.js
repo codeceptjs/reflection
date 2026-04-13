@@ -1,9 +1,11 @@
 import { parseFile } from './parser.js'
 import { resolveSourceFile } from './source-path.js'
-import { locateSuiteByTitle, collectSuiteStatements } from './locate/suite.js'
+import { locateSuiteByTitle, collectSuiteStatements, HOOK_KINDS } from './locate/suite.js'
 import { extractScenarioDepsJS, extractScenarioDepsTS } from './locate/deps.js'
 import { Edit } from './edit.js'
-import { ReflectionError, NotFoundError } from './errors.js'
+import { ReflectionError, NotFoundError, AmbiguousLocateError } from './errors.js'
+
+export { HOOK_KINDS }
 
 export class SuiteReflection {
   constructor(suite) {
@@ -59,6 +61,19 @@ export class SuiteReflection {
       title: s.title,
       range: s.range,
     }))
+  }
+
+  get hooks() {
+    const { hooks } = this._statements()
+    return hooks.map(h => ({
+      kind: h.kind,
+      line: h.line,
+      range: h.range,
+    }))
+  }
+
+  findHook(kind) {
+    return this.hooks.filter(h => h.kind === kind)
   }
 
   get dependencies() {
@@ -132,19 +147,108 @@ export class SuiteReflection {
         { filePath: parsed.filePath },
       )
     }
+    return this._buildRemoveEdit(parsed, match)
+  }
+
+  addHook(kind, code, { position = 'afterHooks' } = {}) {
+    if (!HOOK_KINDS.includes(kind)) {
+      throw new ReflectionError(
+        `addHook: unknown hook kind "${kind}". Expected one of: ${HOOK_KINDS.join(', ')}`,
+      )
+    }
+    const parsed = this._parsed()
+    const { featureStmt, hooks, suiteEnd } = this._statements()
+    const eol = parsed.eol
+
+    let insertPos
+    if (position === 'afterFeature' || hooks.length === 0) {
+      insertPos = featureStmt ? featureStmt.end : this._locate().range.end
+    } else {
+      insertPos = hooks[hooks.length - 1].range.end
+    }
+    if (insertPos > suiteEnd) insertPos = suiteEnd
+
+    const trimmed = code.replace(/[\r\n]+$/, '')
+    const replacement = eol + eol + trimmed + eol
+
+    return new Edit({
+      filePath: parsed.filePath,
+      source: parsed.source,
+      parsedAtHash: parsed.hash,
+      start: insertPos,
+      end: insertPos,
+      replacement,
+      eol,
+    })
+  }
+
+  removeHook(kind, { index } = {}) {
+    const parsed = this._parsed()
+    const match = this._pickHook(kind, index, parsed.filePath)
+    return this._buildRemoveEdit(parsed, match)
+  }
+
+  replaceHook(kind, code, { index } = {}) {
+    const parsed = this._parsed()
+    const match = this._pickHook(kind, index, parsed.filePath)
+    return new Edit({
+      filePath: parsed.filePath,
+      source: parsed.source,
+      parsedAtHash: parsed.hash,
+      start: match.range.start,
+      end: match.range.end,
+      replacement: code.replace(/[\r\n]+$/, ''),
+      eol: parsed.eol,
+    })
+  }
+
+  _pickHook(kind, index, filePath) {
+    if (!HOOK_KINDS.includes(kind)) {
+      throw new ReflectionError(
+        `Unknown hook kind "${kind}". Expected one of: ${HOOK_KINDS.join(', ')}`,
+        { filePath },
+      )
+    }
+    const { hooks } = this._statements()
+    const matches = hooks.filter(h => h.kind === kind)
+    if (matches.length === 0) {
+      throw new NotFoundError(
+        `No ${kind} hook found in suite "${this.title}" in ${filePath}`,
+        { filePath },
+      )
+    }
+    if (index != null) {
+      if (index < 0 || index >= matches.length) {
+        throw new NotFoundError(
+          `${kind} hook index ${index} out of range (0..${matches.length - 1})`,
+          { filePath },
+        )
+      }
+      return matches[index]
+    }
+    if (matches.length > 1) {
+      throw new AmbiguousLocateError(
+        `Multiple ${kind} hooks in suite "${this.title}". Pass { index } to disambiguate.`,
+        {
+          filePath,
+          candidates: matches.map(m => ({ start: m.range.start, end: m.range.end, line: m.line })),
+        },
+      )
+    }
+    return matches[0]
+  }
+
+  _buildRemoveEdit(parsed, match) {
     const eol = parsed.eol
     let start = match.range.start
     let end = match.range.end
-    // Eat one trailing newline so the surrounding blank line becomes the new separator
     if (parsed.source.slice(end, end + eol.length) === eol) end += eol.length
-    // If there was a preceding blank line, eat that too
     if (
       parsed.source.slice(start - eol.length, start) === eol &&
       parsed.source.slice(start - 2 * eol.length, start - eol.length) === eol
     ) {
       start -= eol.length
     }
-
     return new Edit({
       filePath: parsed.filePath,
       source: parsed.source,
